@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Field Observation Logger | Field Research Tool</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha512-sA+Ba4LE0V56IBsW9gOij3+z1V4YRCpN1eXjeDut3PGIcyiRVhWQJYlHOM3zThpiIS3gEJf0y67F6M3G6+TMmw==" crossorigin="" />
     <style>
         :root {
             color-scheme: dark;
@@ -238,6 +239,93 @@
             min-height: 22px;
         }
 
+        .gps-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .gps-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            width: min(100%, 360px);
+        }
+
+        .mini-map {
+            height: 220px;
+            border-radius: 24px;
+            border: 1px solid #d7e8de;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .field-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .small-note {
+            margin-top: 6px;
+            color: #4f6b58;
+            font-size: 0.9rem;
+        }
+
+        .footer-branding {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .footer-logo {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            object-fit: cover;
+            border: 1px solid rgba(31, 94, 63, 0.15);
+        }
+
+        .footer-contact {
+            text-align: center;
+            color: #a3bfaf;
+            line-height: 1.5;
+            font-size: 0.92rem;
+        }
+
+        .footer-contact a {
+            color: #d9f0d7;
+            text-decoration: none;
+        }
+
+        .footer-contact a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-note {
+            color: #a3bfaf;
+            font-size: 0.82rem;
+        }
+
+        .obs-item a {
+            color: #1f5e3f;
+            text-decoration: underline;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 6px;
+            vertical-align: middle;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
         @media (max-width: 640px) {
             .flex-buttons {
                 grid-template-columns: 1fr;
@@ -272,14 +360,70 @@
 
         <div class="form-group">
             <label>📍 GPS coordinates</label>
-            <input type="text" id="gps" placeholder="Click 'Get GPS' or type manually">
-            <button id="getGpsBtn" class="secondary-button">📡 Get current location</button>
+            <div class="gps-row">
+                <input type="text" id="gps" placeholder="Click 'Get GPS' or type manually">
+                <div class="gps-buttons">
+                    <button id="getGpsBtn" class="secondary-button" type="button">📡 Get current location</button>
+                    <button id="copyCoordsBtn" class="secondary-button" type="button">📋 Copy coordinates</button>
+                </div>
+            </div>
             <div id="locationStatus"></div>
+            <div id="miniMap" class="mini-map"></div>
         </div>
 
         <div class="form-group">
             <label>📝 Field notes (habit, habitat, phenology)</label>
             <textarea rows="2" id="notes" placeholder="e.g., Growing near stream, flowers pink, 1.5m tall"></textarea>
+        </div>
+
+        <div class="field-grid">
+            <div class="form-group">
+                <label>🌱 Soil type</label>
+                <select id="soilType">
+                    <option value="">Select soil type</option>
+                    <option value="Sandy">Sandy</option>
+                    <option value="Clay">Clay</option>
+                    <option value="Loam">Loam</option>
+                    <option value="Peat">Peat</option>
+                    <option value="Silt">Silt</option>
+                    <option value="Chalk">Chalk</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>☀️ Weather conditions</label>
+                <select id="weather">
+                    <option value="">Select weather</option>
+                    <option value="Sunny">Sunny</option>
+                    <option value="Cloudy">Cloudy</option>
+                    <option value="Raining">Raining</option>
+                    <option value="Windy">Windy</option>
+                    <option value="Foggy">Foggy</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>⛰️ Slope / aspect</label>
+                <select id="slope">
+                    <option value="">Select aspect</option>
+                    <option value="North-facing">North-facing</option>
+                    <option value="East-facing">East-facing</option>
+                    <option value="South-facing">South-facing</option>
+                    <option value="West-facing">West-facing</option>
+                    <option value="Flat / level">Flat / level</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📏 Plant height (cm)</label>
+                <input type="number" id="plantHeight" min="0" step="1" placeholder="e.g. 150">
+            </div>
+            <div class="form-group">
+                <label>🌸 Flower colour</label>
+                <input type="color" id="flowerColour" value="#7f8c8d">
+            </div>
+            <div class="form-group">
+                <label>📊 Abundance (1–5)</label>
+                <input type="range" id="abundance" min="1" max="5" value="3">
+                <div id="abundanceValue" class="small-note">3</div>
+            </div>
         </div>
 
         <div class="form-group">
@@ -303,11 +447,46 @@
             <div style="text-align:center; padding: 32px;">No observations yet. Add your first field record.</div>
         </div>
     </div>
-    <footer>Secure field data storage on this device · export to CSV or GeoJSON for analysis.</footer>
+    <footer>
+        <div class="footer-branding">
+            <img src="ChumaGrandmaster.png" alt="Chuma Khuliso logo" class="footer-logo">
+            <div class="footer-contact">
+                <div><strong>Chuma Khuliso</strong> — Honours (Botany), University of Venda</div>
+                <div>Email: <a href="mailto:ChumaGrandmaster@gmail.com">ChumaGrandmaster@gmail.com</a> · <a href="mailto:22021279@mvula.univen.ac.za">22021279@mvula.univen.ac.za</a></div>
+                <div>Contact: <a href="tel:+27640998447">0640998447</a></div>
+            </div>
+        </div>
+        <div class="footer-note">Secure field data storage on this device · export to CSV or GeoJSON for analysis.</div>
+    </footer>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha512-8Q+GeSzt5d2zQ2zLZ+BfIunCZ+9Yq0wyhkIdcVrh6pOUZkNDO0rZ0xv7Da5bI6XT5lSRGSnY0tZg8+WcfK7nkQ==" crossorigin=""></script>
 <script>
     let observations = [];
+    let currentPhotoData = null;
+    let currentMapUrl = '';
+    let map;
+    let mapMarker;
+
+    function initMap() {
+        if (map) return;
+        map = L.map('miniMap', { zoomControl: true, attributionControl: false }).setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+    }
+
+    function updateMap(lat, lon) {
+        initMap();
+        if (!mapMarker) {
+            mapMarker = L.marker([lat, lon]).addTo(map);
+        } else {
+            mapMarker.setLatLng([lat, lon]);
+        }
+        map.setView([lat, lon], 16);
+        currentMapUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`;
+    }
 
     function loadData() {
         const stored = localStorage.getItem('field_observation_log');
@@ -332,11 +511,16 @@
             const originalIdx = observations.length - 1 - idx;
             const date = new Date(obs.timestamp).toLocaleString();
             const photoHtml = obs.photoData ? `<img src="${obs.photoData}" style="max-width:80px; max-height:80px; border-radius:16px; margin-top:8px;">` : '';
+            const flowerSwatch = obs.flowerColour ? `<span class="color-swatch" style="background:${escapeHtml(obs.flowerColour)}"></span>` : '';
             html += `
                 <div class="obs-item">
                     <div class="obs-name">🌾 ${escapeHtml(obs.plantName)}</div>
                     <div class="obs-meta">📍 ${escapeHtml(obs.gps || 'no GPS')} &nbsp;|&nbsp; ${date}</div>
                     <div class="obs-meta">📝 ${escapeHtml(obs.notes || '—')}</div>
+                    <div class="obs-meta">🌱 Soil: ${escapeHtml(obs.soilType || '—')} &nbsp;|&nbsp; Weather: ${escapeHtml(obs.weather || '—')}</div>
+                    <div class="obs-meta">⛰️ Aspect: ${escapeHtml(obs.slope || '—')} &nbsp;|&nbsp; Height: ${escapeHtml(obs.plantHeight || '—')} &nbsp;|&nbsp; Abundance: ${escapeHtml(obs.abundance || '—')}</div>
+                    <div class="obs-meta">🌸 Colour: ${escapeHtml(obs.flowerColour || '—')} ${flowerSwatch}</div>
+                    ${obs.mapUrl ? `<div class="obs-meta">🗺️ <a href="${escapeHtml(obs.mapUrl)}" target="_blank">View on map</a></div>` : ''}
                     ${photoHtml}
                     <button class="btn-small" data-idx="${originalIdx}">🗑️ Remove</button>
                 </div>
@@ -391,6 +575,7 @@
                 const gpsString = `${lat}, ${lon}`;
                 document.getElementById('gps').value = gpsString;
                 updateLocationStatus(`✅ GPS captured: ${gpsString}`);
+                updateMap(parseFloat(lat), parseFloat(lon));
             },
             (err) => {
                 let message = `⚠️ GPS error: ${err.message}. You can type coordinates manually.`;
@@ -411,7 +596,24 @@
         );
     });
 
-    let currentPhotoData = null;
+    document.getElementById('copyCoordsBtn').addEventListener('click', async () => {
+        const coords = document.getElementById('gps').value.trim();
+        if (!coords) {
+            updateLocationStatus('⚠️ No GPS coordinates to copy. Use Get current location first.', true);
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(coords);
+            updateLocationStatus('✅ Coordinates copied to clipboard!');
+        } catch (err) {
+            updateLocationStatus('⚠️ Clipboard access failed. Copy coordinates manually.', true);
+        }
+    });
+
+    document.getElementById('abundance').addEventListener('input', (e) => {
+        document.getElementById('abundanceValue').innerText = e.target.value;
+    });
+
     document.getElementById('photoInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file && file.type.startsWith('image/')) {
@@ -435,11 +637,31 @@
         }
         const gps = document.getElementById('gps').value.trim();
         const notes = document.getElementById('notes').value.trim();
+        const soilType = document.getElementById('soilType').value;
+        const weather = document.getElementById('weather').value;
+        const slope = document.getElementById('slope').value;
+        const plantHeight = document.getElementById('plantHeight').value.trim();
+        const flowerColour = document.getElementById('flowerColour').value;
+        const abundance = document.getElementById('abundance').value;
+        let saveMapUrl = currentMapUrl || '';
+        if (!saveMapUrl && gps) {
+            const match = gps.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+            if (match) {
+                saveMapUrl = `https://www.openstreetmap.org/?mlat=${match[1]}&mlon=${match[2]}#map=18/${match[1]}/${match[2]}`;
+            }
+        }
         const newObs = {
             id: Date.now(),
             plantName: plantName,
             gps: gps || 'not recorded',
             notes: notes || '',
+            soilType: soilType || '',
+            weather: weather || '',
+            slope: slope || '',
+            plantHeight: plantHeight ? `${plantHeight} cm` : '',
+            flowerColour: flowerColour || '',
+            abundance: abundance || '3',
+            mapUrl: saveMapUrl || '',
             photoData: currentPhotoData || null,
             timestamp: new Date().toISOString()
         };
@@ -448,20 +670,35 @@
         document.getElementById('plantName').value = '';
         document.getElementById('gps').value = '';
         document.getElementById('notes').value = '';
+        document.getElementById('soilType').value = '';
+        document.getElementById('weather').value = '';
+        document.getElementById('slope').value = '';
+        document.getElementById('plantHeight').value = '';
+        document.getElementById('flowerColour').value = '#7f8c8d';
+        document.getElementById('abundance').value = '3';
+        document.getElementById('abundanceValue').innerText = '3';
         document.getElementById('photoInput').value = '';
         currentPhotoData = null;
+        currentMapUrl = '';
         document.getElementById('photoPreview').innerHTML = '';
-        alert('Observation saved!');
+        updateLocationStatus('✅ Observation saved!');
     });
 
     document.getElementById('exportCsvBtn').addEventListener('click', () => {
         if (!observations.length) { alert('No data to export'); return; }
-        let csv = [['PlantName','GPS_Coordinates','Notes','Timestamp'].join(',')];
+        let csv = [['PlantName','GPS_Coordinates','Notes','SoilType','Weather','Slope','PlantHeight','FlowerColour','Abundance','MapURL','Timestamp'].join(',')];
         observations.forEach(obs => {
             csv.push([
                 `"${obs.plantName.replace(/"/g, '""')}"`,
                 `"${obs.gps.replace(/"/g, '""')}"`,
                 `"${(obs.notes || '').replace(/"/g, '""')}"`,
+                `"${(obs.soilType || '').replace(/"/g, '""')}"`,
+                `"${(obs.weather || '').replace(/"/g, '""')}"`,
+                `"${(obs.slope || '').replace(/"/g, '""')}"`,
+                `"${(obs.plantHeight || '').replace(/"/g, '""')}"`,
+                `"${(obs.flowerColour || '').replace(/"/g, '""')}"`,
+                `"${(obs.abundance || '').replace(/"/g, '""')}"`,
+                `"${(obs.mapUrl || '').replace(/"/g, '""')}"`,
                 `"${obs.timestamp}"`
             ].join(','));
         });
@@ -489,6 +726,13 @@
                 properties: {
                     name: obs.plantName,
                     notes: obs.notes,
+                    soilType: obs.soilType,
+                    weather: obs.weather,
+                    slope: obs.slope,
+                    plantHeight: obs.plantHeight,
+                    flowerColour: obs.flowerColour,
+                    abundance: obs.abundance,
+                    mapUrl: obs.mapUrl,
                     timestamp: obs.timestamp
                 }
             });
